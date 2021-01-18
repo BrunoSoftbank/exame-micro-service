@@ -1,10 +1,7 @@
 package br.com.softbank.exame.service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import javax.transaction.Transactional;
 
@@ -15,8 +12,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import br.com.softbank.exame.dto.AtualizarExameLoteDTO;
-import br.com.softbank.exame.dto.NovoExameLoteDTO;
 import br.com.softbank.exame.enuns.ErrosDefaultEnum;
 import br.com.softbank.exame.enuns.StatusEnum;
 import br.com.softbank.exame.exception.ExameNotFoundException;
@@ -27,7 +22,7 @@ import br.com.softbank.exame.repository.ExameRepository;
 
 @Service
 public class ExameService {
-	
+
 	private static final Logger LOG = LoggerFactory.getLogger(ExameService.class);
 
 	@Autowired
@@ -35,7 +30,7 @@ public class ExameService {
 
 	@Autowired
 	private TipoExameService tipoExameService;
-	
+
 	@Autowired
 	private ExameRepository exameRepository;
 
@@ -44,7 +39,7 @@ public class ExameService {
 		return exameRepository.findAll();
 	}
 
-	@Cacheable(cacheNames = "Exame", key="#id")
+	@Cacheable(cacheNames = "Exame", key = "#id")
 	public Exame findById(Long id) {
 		Optional<Exame> exameOptional = exameRepository.findById(id);
 		if (exameOptional.isPresent()) {
@@ -55,71 +50,52 @@ public class ExameService {
 
 	@Transactional
 	@CacheEvict(cacheNames = "Exame", allEntries = true)
-	public void deleteByIds(Long[] ids) {
-		if (ids != null && ids.length > 0) {
-			Arrays.asList(ids).stream().forEach(id -> {
-				
-				LOG.warn(this.getClass().getSimpleName() + ".deleteByIds(Long[] ids) " + String.valueOf(id));
-				
-				Exame exame = this.findById(id);
-				exameRepository.delete(exame);
-			});
-		}
+	public void deleteById(Long id) {
+		LOG.warn(this.getClass().getSimpleName() + ".deleteById(Long id) " + String.valueOf(id));
+
+		Exame exame = this.findById(id);
+		exameRepository.delete(exame);
 	}
 
 	@Transactional
 	@CacheEvict(cacheNames = "Exame", allEntries = true)
-	public List<Exame> save(NovoExameLoteDTO novoExameLoteDTO) {
+	public Exame save(Exame exame) {
+		LOG.warn(this.getClass().getSimpleName() + ".save(Exame exame) " + exame);
+		
 		Status status = statusService.findById(StatusEnum.ATIVO.getId());
-		List<Exame> exames = new ArrayList<>();
+		exame.setStatus(status);
 
-		if(novoExameLoteDTO.getExames() != null && !novoExameLoteDTO.getExames().isEmpty()) {
-			novoExameLoteDTO.getExames().stream().forEach(dto -> {
-				
-				LOG.warn(this.getClass().getSimpleName() + ".save(NovoExameLoteDTO novoExameLoteDTO) " + dto.convertToEntity());
-				
-				Exame exame = dto.convertToEntity();
-				exame.setStatus(status);
+		Tipo tipo = tipoExameService.findById(exame.getTipo().getId());
+		exame.setTipo(tipo);
 
-				Tipo tipo = tipoExameService.findById(exame.getTipo().getId());
-				exame.setTipo(tipo);
-				
-				exames.add(exameRepository.save(exame));
-			});
-		}
-		return exames;
+		return exameRepository.save(exame);
 	}
 
 	@Transactional
 	@CacheEvict(cacheNames = "Exame", allEntries = true)
-	public List<Exame> update(AtualizarExameLoteDTO atualizarExameLoteDTO) {
-		List<Exame> exames = new ArrayList<>();
-		if(atualizarExameLoteDTO.getExames() != null && !atualizarExameLoteDTO.getExames().isEmpty()) {
-			atualizarExameLoteDTO.getExames().stream().forEach(dto -> {
-				
-				LOG.warn(this.getClass().getSimpleName() + ".(AtualizarExameLoteDTO atualizarExameLoteDTO) " + dto.convertToEntity());
-				
-				Exame exameDB = this.findById(dto.getId());
-				exameDB.setNome(dto.getNome());
+	public Exame update(Exame exame) {
 
-				Tipo tipo = tipoExameService.findById(dto.getTipo().getId());
-				exameDB.setTipo(tipo);
-				exames.add(exameRepository.save(exameDB));
-			});
-		}
-		return exames;
+		LOG.warn(this.getClass().getSimpleName() + ".update(Exame exame) " + exame);
+
+		Exame exameDB = this.findById(exame.getId());
+		exameDB.setNome(exame.getNome());
+
+		Tipo tipo = tipoExameService.findById(exame.getTipo().getId());
+		exameDB.setTipo(tipo);
+
+		return exameRepository.save(exameDB);
 	}
 
 	@CacheEvict(cacheNames = "Exame", allEntries = true)
 	public Exame patch(Long id) {
 		LOG.warn(this.getClass().getSimpleName() + ".patch(Long id) " + String.valueOf(id));
-		
+
 		Exame exame = this.findById(id);
-		if(exame.getStatus().getId() == StatusEnum.ATIVO.getId()) {
+		if (exame.getStatus().getId() == StatusEnum.ATIVO.getId()) {
 			exame.setStatus(statusService.findById(StatusEnum.INATIVO.getId()));
 		} else {
 			exame.setStatus(statusService.findById(StatusEnum.ATIVO.getId()));
-		}		
+		}
 		return exameRepository.save(exame);
 	}
 }
