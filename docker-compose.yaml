@@ -49,6 +49,13 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_bundled-plugins:/opt/sonarqube/lib/bundled-plugins
 
+  sftp:
+    image: atmoz/sftp
+    container_name: sftp
+    ports:
+        - "2222:22"
+    command: admin:admin123:::upload
+
 networks:
   sonarnet:
 
@@ -58,4 +65,6 @@ volumes:
   sonarqube_extensions:
   sonarqube_bundled-plugins:
   mysql:
+
+ 
 
